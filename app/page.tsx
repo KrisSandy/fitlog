@@ -23,7 +23,7 @@ export default function Home() {
             fontSize: 15, display: "block",
             boxShadow: "0 0 20px rgba(249,115,22,0.3)"
           }}>
-            📅 View Weekly Routine
+            📋 My Routines
           </Link>
           <Link href="/log" style={{
             background: "#13131e", border: "1px solid #2a2a3a",

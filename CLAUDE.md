@@ -20,11 +20,11 @@ FitLog is a Next.js 16 app (App Router) with TypeScript and Tailwind CSS v4. It'
 
 ### Data flow
 
-1. `lib/routineData.ts` defines the static 7-day weekly schedule (push/pull/legs/full/rest) with exercises, weights, and rep targets.
+1. `lib/routineData.ts` defines standalone routine templates (Push, Pull, Legs, Full Body) **not tied to specific days**. Each routine has exercises, weights, rep targets, and a color.
 2. `lib/storage.ts` owns all data types (`WorkoutLog`, `LoggedExercise`, `LoggedSet`) and CRUD helpers. `parseRepsToSets()` converts rep strings like `"12×3"` or `"12,10,10"` into individual set arrays. All functions guard against SSR with `typeof window` checks.
-3. `WorkoutLogger` loads today's routine from `routineData`, hydrates it with any saved log from localStorage, and lets the user toggle sets, edit reps/weight, and add custom exercises before saving.
-4. `WorkoutHistory` reads all saved logs from localStorage, sorts by date, and renders a calendar + expandable list.
-5. `WorkoutRoutine` is read-only — it renders the static weekly plan with 2-week progression targets (hardcoded inline).
+3. `WorkoutLogger` shows a **routine picker** first (Push/Pull/Legs/Full/Empty), then populates a checklist with per-set rows (each set has its own checkbox, reps, weight). Users can add custom exercises and save to localStorage.
+4. `WorkoutHistory` reads all saved logs from localStorage, sorts by date, and renders a calendar + expandable list with per-set detail.
+5. `WorkoutRoutine` displays routine templates as browsable cards (not a weekly calendar) with 2-week progression targets.
 
 ### Key conventions
 

@@ -6,9 +6,8 @@ export type Exercise = {
   note: string;
 };
 
-export type Day = {
+export type Routine = {
   id: string;
-  label: string;
   name: string;
   type: string;
   color: string;
@@ -18,9 +17,9 @@ export type Day = {
   exercises: Exercise[];
 };
 
-export const days: Day[] = [
+export const routines: Routine[] = [
   {
-    id: "mon", label: "MON", name: "Push", type: "push",
+    id: "push", name: "Push", type: "push",
     color: "#f97316", glow: "rgba(249,115,22,0.2)", icon: "⬆️",
     muscles: ["Chest", "Shoulders", "Triceps"],
     exercises: [
@@ -33,7 +32,7 @@ export const days: Day[] = [
     ]
   },
   {
-    id: "tue", label: "TUE", name: "Pull", type: "pull",
+    id: "pull", name: "Pull", type: "pull",
     color: "#3b82f6", glow: "rgba(59,130,246,0.2)", icon: "⬇️",
     muscles: ["Back", "Biceps", "Rear Delts"],
     exercises: [
@@ -45,12 +44,7 @@ export const days: Day[] = [
     ]
   },
   {
-    id: "wed", label: "WED", name: "Rest", type: "rest",
-    color: "#6b7280", glow: "rgba(107,114,128,0.1)", icon: "😴",
-    muscles: ["Recovery"], exercises: []
-  },
-  {
-    id: "thu", label: "THU", name: "Legs", type: "legs",
+    id: "legs", name: "Legs", type: "legs",
     color: "#22c55e", glow: "rgba(34,197,94,0.2)", icon: "🦵",
     muscles: ["Quads", "Hamstrings", "Calves", "Core"],
     exercises: [
@@ -62,12 +56,7 @@ export const days: Day[] = [
     ]
   },
   {
-    id: "fri", label: "FRI", name: "Rest", type: "rest",
-    color: "#6b7280", glow: "rgba(107,114,128,0.1)", icon: "😴",
-    muscles: ["Recovery"], exercises: []
-  },
-  {
-    id: "sat", label: "SAT", name: "Full", type: "full",
+    id: "full", name: "Full Body", type: "full",
     color: "#a855f7", glow: "rgba(168,85,247,0.2)", icon: "💪",
     muscles: ["Chest", "Back", "Shoulders"],
     exercises: [
@@ -79,9 +68,13 @@ export const days: Day[] = [
       { name: "Bicep Curl (DB)", sets: 3, weight: "6→8kg", reps: "12×3", note: "Test 8kg here" },
     ]
   },
-  {
-    id: "sun", label: "SUN", name: "Rest", type: "rest",
-    color: "#6b7280", glow: "rgba(107,114,128,0.1)", icon: "😴",
-    muscles: ["Recovery"], exercises: []
-  },
 ];
+
+export function getRoutineById(id: string): Routine | undefined {
+  return routines.find(r => r.id === id);
+}
+
+export function getColorForRoutineType(type: string): string {
+  const r = routines.find(rt => rt.type === type);
+  return r?.color || "#6b7280";
+}

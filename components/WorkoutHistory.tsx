@@ -6,12 +6,12 @@ const MONTH_NAMES = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SE
 const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function getColorForDayType(dayType: string): string {
-  const map: Record<string, string> = { push: "#f97316", pull: "#3b82f6", legs: "#22c55e", full: "#a855f7", rest: "#6b7280", custom: "#f59e0b" };
+  const map: Record<string, string> = { push: "#f97316", pull: "#3b82f6", legs: "#22c55e", full: "#a855f7", custom: "#f59e0b" };
   return map[dayType] || "#6b7280";
 }
 
 function getDayTypeLabel(dayType: string): string {
-  const map: Record<string, string> = { push: "PUSH", pull: "PULL", legs: "LEGS", full: "FULL", rest: "REST", custom: "CUSTOM" };
+  const map: Record<string, string> = { push: "PUSH", pull: "PULL", legs: "LEGS", full: "FULL", custom: "CUSTOM" };
   return map[dayType] || dayType.toUpperCase();
 }
 

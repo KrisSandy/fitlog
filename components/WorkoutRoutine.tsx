@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { days } from "@/lib/routineData";
+import { routines } from "@/lib/routineData";
 
 const targets = [
   { exercise: "Shoulder Press", from: "6kg", to: "8kg", status: "ready" },
@@ -20,8 +20,8 @@ function SetDots({ count, color }: { count: number; color: string }) {
 }
 
 export default function WorkoutRoutine() {
-  const [selected, setSelected] = useState("mon");
-  const activeDay = days.find(d => d.id === selected)!;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = selectedId ? routines.find(r => r.id === selectedId) : null;
 
   return (
     <div style={{ minHeight: "100vh", background: "#080810", fontFamily: "'Outfit', sans-serif", color: "#e8e8f0", padding: "24px 16px" }}>
@@ -30,84 +30,90 @@ export default function WorkoutRoutine() {
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 42, letterSpacing: 3, color: "#fff", lineHeight: 1 }}>WEEKLY</span>
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 42, letterSpacing: 3, background: "linear-gradient(135deg, #f97316, #a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1 }}>ROUTINE</span>
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 42, letterSpacing: 3, color: "#fff", lineHeight: 1 }}>MY</span>
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 42, letterSpacing: 3, background: "linear-gradient(135deg, #f97316, #a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1 }}>ROUTINES</span>
           </div>
-          <div style={{ color: "#6b7280", fontSize: 13, marginTop: 4, letterSpacing: 1 }}>PERSONALISED · WEEK 5 · 4 TRAINING DAYS</div>
+          <div style={{ color: "#6b7280", fontSize: 13, marginTop: 4, letterSpacing: 1 }}>{routines.length} ROUTINES · PICK ANY WHEN YOU TRAIN</div>
         </div>
 
-        {/* Day strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 24 }}>
-          {days.map(day => (
-            <button key={day.id} onClick={() => setSelected(day.id)} style={{
-              background: selected === day.id ? day.color : day.type === "rest" ? "#111118" : "#13131e",
-              border: `1px solid ${selected === day.id ? day.color : "#1e1e2e"}`,
-              borderRadius: 12, padding: "10px 4px", cursor: "pointer",
+        {/* Routine selector strip */}
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${routines.length}, 1fr)`, gap: 8, marginBottom: 24 }}>
+          {routines.map(r => (
+            <button key={r.id} onClick={() => setSelectedId(selectedId === r.id ? null : r.id)} style={{
+              background: selectedId === r.id ? r.color : "#13131e",
+              border: `1px solid ${selectedId === r.id ? r.color : "#1e1e2e"}`,
+              borderRadius: 14, padding: "12px 4px", cursor: "pointer",
               transition: "all 0.2s ease",
-              boxShadow: selected === day.id ? `0 0 20px ${day.glow}` : "none",
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 4
+              boxShadow: selectedId === r.id ? `0 0 20px ${r.glow}` : "none",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
             }}>
-              <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1, color: selected === day.id ? "#fff" : "#6b7280" }}>{day.label}</span>
-              <span style={{ fontSize: 16 }}>{day.icon}</span>
-              <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: selected === day.id ? "rgba(255,255,255,0.9)" : "#4b4b60", textTransform: "uppercase" }}>{day.name}</span>
+              <span style={{ fontSize: 20 }}>{r.icon}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: selectedId === r.id ? "#fff" : "#6b7280", textTransform: "uppercase" }}>{r.name}</span>
             </button>
           ))}
         </div>
 
-        {/* Day detail */}
-        <div key={selected}>
-          {activeDay.type === "rest" ? (
-            <div style={{ background: "#0f0f18", border: "1px solid #1e1e2e", borderRadius: 20, padding: 32, textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>😴</div>
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: 2, color: "#fff" }}>REST DAY</div>
-              <div style={{ color: "#6b7280", fontSize: 14, marginTop: 8, lineHeight: 1.6 }}>
-                Muscles grow during recovery, not during training. Sleep 7–9hrs, stay hydrated, eat enough protein.
+        {/* Selected routine detail */}
+        {selected ? (
+          <div key={selected.id}>
+            <div style={{
+              background: "#0f0f18", border: `1px solid ${selected.color}30`, borderRadius: 20,
+              padding: "16px 20px", marginBottom: 12,
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              boxShadow: `0 0 30px ${selected.glow}`,
+            }}>
+              <div>
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 32, letterSpacing: 2, color: selected.color, lineHeight: 1 }}>{selected.name}</div>
+                <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                  {selected.muscles.map(m => (
+                    <span key={m} style={{ background: `${selected.color}15`, border: `1px solid ${selected.color}40`, color: selected.color, borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 500 }}>{m}</span>
+                  ))}
+                </div>
               </div>
-              <div style={{ marginTop: 20, display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
-                {["💧 Hydrate", "🥗 Eat well", "🛏️ Sleep 8hr"].map(tip => (
-                  <div key={tip} style={{ background: "#13131e", border: "1px solid #1e1e2e", borderRadius: 20, padding: "6px 12px", fontSize: 12, color: "#9ca3af" }}>{tip}</div>
-                ))}
+              <div style={{ textAlign: "right" }}>
+                <div style={{ color: selected.color, fontSize: 28, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 1 }}>{selected.exercises.length}</div>
+                <div style={{ color: "#6b7280", fontSize: 11 }}>EXERCISES</div>
+                <div style={{ color: selected.color, fontSize: 22, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 1, marginTop: 2 }}>{selected.exercises.reduce((a, e) => a + e.sets, 0)}</div>
+                <div style={{ color: "#6b7280", fontSize: 11 }}>TOTAL SETS</div>
               </div>
             </div>
-          ) : (
-            <>
-              <div style={{ background: "#0f0f18", border: `1px solid ${activeDay.color}30`, borderRadius: 20, padding: "16px 20px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: `0 0 30px ${activeDay.glow}` }}>
-                <div>
-                  <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 32, letterSpacing: 2, color: activeDay.color, lineHeight: 1 }}>{activeDay.name} Day</div>
-                  <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                    {activeDay.muscles.map(m => (
-                      <span key={m} style={{ background: `${activeDay.color}15`, border: `1px solid ${activeDay.color}40`, color: activeDay.color, borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 500 }}>{m}</span>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ color: activeDay.color, fontSize: 28, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 1 }}>{activeDay.exercises.length}</div>
-                  <div style={{ color: "#6b7280", fontSize: 11 }}>EXERCISES</div>
-                  <div style={{ color: activeDay.color, fontSize: 22, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 1, marginTop: 2 }}>{activeDay.exercises.reduce((a, e) => a + e.sets, 0)}</div>
-                  <div style={{ color: "#6b7280", fontSize: 11 }}>TOTAL SETS</div>
-                </div>
-              </div>
 
-              <div style={{ background: "#0f0f18", border: "1px solid #1e1e2e", borderRadius: 20, overflow: "hidden" }}>
-                {activeDay.exercises.map((ex, i) => (
-                  <div key={i} style={{ padding: "14px 18px", borderBottom: i < activeDay.exercises.length - 1 ? "1px solid #1a1a28" : "none", display: "flex", flexDirection: "column", gap: 6 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: "#e8e8f0", lineHeight: 1.2 }}>{ex.name}</div>
-                        <div style={{ fontSize: 11, color: "#6b7280", marginTop: 3, fontStyle: "italic" }}>{ex.note}</div>
-                      </div>
-                      <div style={{ textAlign: "right", marginLeft: 12, flexShrink: 0 }}>
-                        <div style={{ color: activeDay.color, fontWeight: 700, fontSize: 14 }}>{ex.weight}</div>
-                        <div style={{ color: "#9ca3af", fontSize: 11 }}>{ex.reps}</div>
-                      </div>
+            <div style={{ background: "#0f0f18", border: "1px solid #1e1e2e", borderRadius: 20, overflow: "hidden" }}>
+              {selected.exercises.map((ex, i) => (
+                <div key={i} style={{ padding: "14px 18px", borderBottom: i < selected.exercises.length - 1 ? "1px solid #1a1a28" : "none", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#e8e8f0", lineHeight: 1.2 }}>{ex.name}</div>
+                      <div style={{ fontSize: 11, color: "#6b7280", marginTop: 3, fontStyle: "italic" }}>{ex.note}</div>
                     </div>
-                    <SetDots count={ex.sets} color={activeDay.color} />
+                    <div style={{ textAlign: "right", marginLeft: 12, flexShrink: 0 }}>
+                      <div style={{ color: selected.color, fontWeight: 700, fontSize: 14 }}>{ex.weight}</div>
+                      <div style={{ color: "#9ca3af", fontSize: 11 }}>{ex.reps}</div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+                  <SetDots count={ex.sets} color={selected.color} />
+                </div>
+              ))}
+            </div>
+
+            {/* Start workout button */}
+            <a href="/log" style={{
+              display: "block", marginTop: 16, textAlign: "center",
+              background: selected.color, color: "#fff", borderRadius: 14,
+              padding: "14px 24px", textDecoration: "none", fontWeight: 600, fontSize: 15,
+              boxShadow: `0 0 20px ${selected.glow}`,
+            }}>
+              Start {selected.name} Workout →
+            </a>
+          </div>
+        ) : (
+          <div style={{ background: "#0f0f18", border: "1px solid #1e1e2e", borderRadius: 20, padding: 32, textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>👆</div>
+            <div style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.6 }}>
+              Tap a routine above to see its exercises. Pick any routine on any day — train on your schedule.
+            </div>
+          </div>
+        )}
 
         {/* Targets */}
         <div style={{ marginTop: 20, background: "#0f0f18", border: "1px solid #1e1e2e", borderRadius: 20, overflow: "hidden" }}>
@@ -134,7 +140,7 @@ export default function WorkoutRoutine() {
         </div>
 
         <div style={{ marginTop: 16, padding: "12px 18px", background: "#0f0f18", border: "1px solid #1e1e2e", borderRadius: 16, fontSize: 12, color: "#6b7280", textAlign: "center", lineHeight: 1.6 }}>
-          60–90 sec rest between sets · Wed, Fri, Sun = full rest
+          60–90 sec rest between sets · Take rest days when your body needs them
         </div>
 
         <div style={{ marginTop: 16, textAlign: "center" }}>
