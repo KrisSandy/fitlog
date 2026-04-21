@@ -20,8 +20,11 @@ export default function WorkoutHistory() {
   const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    const all = getWorkoutLogs();
-    setLogs(all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    const load = async () => {
+      const all = await getWorkoutLogs();
+      setLogs(all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    };
+    load();
   }, []);
 
   const toggleExpand = (id: string) => setExpandedLogs(prev => ({ ...prev, [id]: !prev[id] }));

@@ -8,6 +8,71 @@ import {
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+const EXERCISE_CATALOG = [
+  {
+    group: "Chest", color: "#f97316",
+    exercises: [
+      { name: "Bench Press (Barbell)", sets: 4, reps: "10", weight: "25kg" },
+      { name: "Incline DB Press", sets: 3, reps: "12", weight: "10kg" },
+      { name: "Cable Fly Crossovers", sets: 3, reps: "12", weight: "10kg" },
+      { name: "Chest Dips", sets: 3, reps: "10", weight: "BW" },
+      { name: "Push-Ups", sets: 3, reps: "15", weight: "BW" },
+    ],
+  },
+  {
+    group: "Back", color: "#3b82f6",
+    exercises: [
+      { name: "Lat Pulldown", sets: 4, reps: "12", weight: "35kg" },
+      { name: "Cable Row V-Grip", sets: 4, reps: "12", weight: "40kg" },
+      { name: "Seated Cable Row", sets: 3, reps: "12", weight: "35kg" },
+      { name: "Barbell Row", sets: 4, reps: "10", weight: "30kg" },
+      { name: "Pull-Ups", sets: 3, reps: "8", weight: "BW" },
+    ],
+  },
+  {
+    group: "Shoulders", color: "#f59e0b",
+    exercises: [
+      { name: "Shoulder Press (DB)", sets: 3, reps: "10", weight: "8kg" },
+      { name: "Lateral Raise (DB)", sets: 3, reps: "12", weight: "6kg" },
+      { name: "Face Pull", sets: 4, reps: "12", weight: "15kg" },
+      { name: "Front Raise (DB)", sets: 3, reps: "12", weight: "6kg" },
+      { name: "Rear Delt Fly", sets: 3, reps: "12", weight: "6kg" },
+    ],
+  },
+  {
+    group: "Arms", color: "#ec4899",
+    exercises: [
+      { name: "Bicep Curl (Cable)", sets: 3, reps: "12", weight: "20kg" },
+      { name: "Bicep Curl (DB)", sets: 3, reps: "12", weight: "8kg" },
+      { name: "Hammer Curl (DB)", sets: 3, reps: "12", weight: "8kg" },
+      { name: "Triceps Pushdown", sets: 3, reps: "12", weight: "25kg" },
+      { name: "Overhead Tricep Extension", sets: 3, reps: "12", weight: "10kg" },
+      { name: "Skull Crushers", sets: 3, reps: "10", weight: "15kg" },
+    ],
+  },
+  {
+    group: "Legs", color: "#22c55e",
+    exercises: [
+      { name: "Leg Press (Machine)", sets: 4, reps: "12", weight: "40kg" },
+      { name: "Leg Extension", sets: 3, reps: "12", weight: "20kg" },
+      { name: "Leg Curl", sets: 3, reps: "12", weight: "20kg" },
+      { name: "Squat (Barbell)", sets: 4, reps: "10", weight: "30kg" },
+      { name: "Bulgarian Split Squat", sets: 3, reps: "10", weight: "8kg" },
+      { name: "Calf Raise", sets: 3, reps: "15", weight: "BW" },
+      { name: "Romanian Deadlift", sets: 3, reps: "10", weight: "25kg" },
+    ],
+  },
+  {
+    group: "Core", color: "#a855f7",
+    exercises: [
+      { name: "Plank", sets: 3, reps: "45 sec", weight: "BW" },
+      { name: "Cable Crunch", sets: 3, reps: "15", weight: "20kg" },
+      { name: "Hanging Leg Raise", sets: 3, reps: "12", weight: "BW" },
+      { name: "Ab Wheel Rollout", sets: 3, reps: "10", weight: "BW" },
+    ],
+  },
+];
+
 function formatDateDisplay(dateStr: string): string {
   if (!dateStr) return "";
   const date = new Date(dateStr + "T00:00:00");
@@ -69,10 +134,11 @@ export default function WorkoutLogger() {
     const today = getTodayDateString();
     setCurrentDate(today);
     loadDate(today);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadDate = (dateStr: string) => {
-    const existing = getLogForDate(dateStr);
+  const loadDate = async (dateStr: string) => {
+    const existing = await getLogForDate(dateStr);
     if (existing) {
       setLog(existing);
       setNotes(existing.notes);
@@ -159,12 +225,16 @@ export default function WorkoutLogger() {
     setShowAddExercise(false);
   };
 
-  const saveWorkout = () => {
-    if (!log) return;
+  const [saving, setSaving] = useState(false);
+
+  const saveWorkout = async () => {
+    if (!log || saving) return;
+    setSaving(true);
     const updated = { ...log, notes, completedAt: new Date().toISOString() };
-    saveWorkoutLog(updated);
+    await saveWorkoutLog(updated);
     setLog(updated);
     setSaved(true);
+    setSaving(false);
     setTimeout(() => setSaved(false), 2500);
   };
 
@@ -444,7 +514,44 @@ export default function WorkoutLogger() {
               </button>
             ) : (
               <div style={{ marginBottom: 24, background: "#0f0f18", border: "1px solid #1e1e2e", borderRadius: 14, padding: 16 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+                  {/* Quick-pick exercise catalog */}
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#6b7280", marginBottom: 8, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>Quick Pick</label>
+                    {EXERCISE_CATALOG.map(group => (
+                      <div key={group.group} style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, color: group.color, fontWeight: 600, marginBottom: 6 }}>{group.group}</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {group.exercises.map(ex => (
+                            <button
+                              key={ex.name}
+                              onClick={() => { setCustomName(ex.name); setCustomSets(String(ex.sets)); setCustomReps(String(ex.reps)); setCustomWeight(ex.weight); }}
+                              style={{
+                                background: customName === ex.name ? `${group.color}20` : "#1a1a28",
+                                border: `1px solid ${customName === ex.name ? group.color : "#2a2a3a"}`,
+                                borderRadius: 10, padding: "5px 10px",
+                                color: customName === ex.name ? group.color : "#9ca3af",
+                                cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 500,
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              {ex.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ flex: 1, height: 1, background: "#1e1e2e" }} />
+                    <span style={{ fontSize: 11, color: "#4b4b60", fontWeight: 600 }}>OR TYPE YOUR OWN</span>
+                    <div style={{ flex: 1, height: 1, background: "#1e1e2e" }} />
+                  </div>
+
+                  {/* Manual input */}
                   <div>
                     <label style={{ display: "block", fontSize: 12, color: "#6b7280", marginBottom: 6 }}>Exercise Name</label>
                     <input type="text" placeholder="e.g., Dumbbell Curl" value={customName} onChange={e => setCustomName(e.target.value)}
@@ -485,15 +592,16 @@ export default function WorkoutLogger() {
             </div>
 
             {/* Save */}
-            <button onClick={saveWorkout} style={{
+            <button onClick={saveWorkout} disabled={saving} style={{
               width: "100%", background: dayColor, border: "none", borderRadius: 14,
-              padding: "14px 16px", color: "#fff", cursor: "pointer", fontSize: 15, fontWeight: 600,
+              padding: "14px 16px", color: "#fff", cursor: saving ? "wait" : "pointer", fontSize: 15, fontWeight: 600,
               fontFamily: "inherit", marginBottom: 16, boxShadow: `0 0 20px ${dayGlow}`, transition: "opacity 0.2s ease",
+              opacity: saving ? 0.7 : 1,
             }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = "0.9")}
-              onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+              onMouseEnter={e => { if (!saving) e.currentTarget.style.opacity = "0.9"; }}
+              onMouseLeave={e => { if (!saving) e.currentTarget.style.opacity = "1"; }}
             >
-              Save Workout
+              {saving ? "Saving..." : "Save Workout"}
             </button>
 
             <div style={{ textAlign: "center" }}>
