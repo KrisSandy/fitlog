@@ -1,18 +1,103 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { routines } from "@/lib/routineData";
+import { getWorkoutLogs, type WorkoutLog } from "@/lib/storage";
 import BottomNav from "@/components/BottomNav";
 import {
   ArrowUp, ArrowDown, Activity, Zap, Dumbbell,
-  ChevronRight, Target, Check,
+  ChevronRight, Target, Check, Loader2,
 } from "lucide-react";
 
-const targets = [
-  { exercise: "Shoulder Press", from: "6kg", to: "8kg",             status: "ready"    },
-  { exercise: "Hammer Curl",    from: "6kg", to: "8kg",             status: "ready"    },
-  { exercise: "Cable Row",      from: "45kg", to: "50kg",           status: "building" },
-  { exercise: "Bench Press",    from: "20kg", to: "25kg consistent", status: "reset"   },
-];
+// ── Progression target types ────────────────────────────
+type TargetStatus = "ready" | "building" | "reset";
+type Target = { exercise: string; from: string; to: string; status: TargetStatus; sessions: number };
+
+// Parse a weight string to a number, handling legacy "30kg", "30→40kg", etc.
+function parseWeight(w: string): number | null {
+  if (!w) return null;
+  // Take the last number in the string (handles "20→25kg" → 25)
+  const matches = w.match(/\d+(\.\d+)?/g);
+  if (!matches) return null;
+  const n = parseFloat(matches[matches.length - 1]);
+  return isNaN(n) ? null : n;
+}
+
+// Suggest next weight increment based on current load
+function nextWeight(current: number): number {
+  if (current < 10)  return Math.round((current + 1)   * 2) / 2;   // +1 kg
+  if (current < 30)  return Math.round((current + 2.5) * 2) / 2;   // +2.5 kg
+  return               Math.round((current + 5)   * 2) / 2;         // +5 kg
+}
+
+function computeTargets(logs: WorkoutLog[]): Target[] {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 14);
+
+  const recentLogs = logs.filter(l => new Date(l.date + "T00:00:00") >= cutoff);
+
+  // Build: exerciseName → sorted array of { date, maxWeight }
+  const history: Record<string, { date: string; max: number }[]> = {};
+
+  for (const log of recentLogs) {
+    for (const ex of log.exercises) {
+      const weights = ex.sets
+        .filter(s => s.completed)
+        .map(s => parseWeight(s.weight))
+        .filter((n): n is number => n !== null);
+
+      if (weights.length === 0) continue;
+      const max = Math.max(...weights);
+
+      if (!history[ex.name]) history[ex.name] = [];
+      // Avoid duplicate dates (same exercise logged twice in one day)
+      if (!history[ex.name].find(e => e.date === log.date)) {
+        history[ex.name].push({ date: log.date, max });
+      }
+    }
+  }
+
+  const targets: Target[] = [];
+
+  for (const [name, sessions] of Object.entries(history)) {
+    if (sessions.length < 2) continue; // need at least 2 sessions for a trend
+
+    sessions.sort((a, b) => a.date.localeCompare(b.date));
+
+    const firstMax = sessions[0].max;
+    const lastMax  = sessions[sessions.length - 1].max;
+
+    let status: TargetStatus;
+    let to: string;
+
+    if (lastMax > firstMax) {
+      // Weight went up — still progressing
+      status = "building";
+      to = String(nextWeight(lastMax));
+    } else if (lastMax === firstMax) {
+      // Held the same weight across sessions — time to go heavier
+      status = "ready";
+      to = String(nextWeight(lastMax));
+    } else {
+      // Weight dropped — consolidate before going up
+      status = "reset";
+      to = `${firstMax} (consolidate)`;
+    }
+
+    targets.push({
+      exercise: name,
+      from: String(lastMax),
+      to,
+      status,
+      sessions: sessions.length,
+    });
+  }
+
+  // Sort: reset first (most urgent), then ready, then building; break ties by session count
+  const order: Record<TargetStatus, number> = { reset: 0, ready: 1, building: 2 };
+  return targets
+    .sort((a, b) => order[a.status] - order[b.status] || b.sessions - a.sessions)
+    .slice(0, 5);
+}
 
 const STATUS_CONFIG = {
   ready:    { color: "#22c55e", bg: "rgba(34,197,94,0.1)",  border: "rgba(34,197,94,0.25)",  label: "Ready"    },
@@ -40,8 +125,17 @@ function SetPips({ count, color }: { count: number; color: string }) {
 }
 
 export default function WorkoutRoutine() {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId]   = useState<string | null>(null);
+  const [targets, setTargets]         = useState<Target[]>([]);
+  const [targetsLoading, setTargetsLoading] = useState(true);
   const selected = selectedId ? routines.find(r => r.id === selectedId) : null;
+
+  useEffect(() => {
+    getWorkoutLogs().then(logs => {
+      setTargets(computeTargets(logs));
+      setTargetsLoading(false);
+    });
+  }, []);
 
   return (
     <div style={{ minHeight: "100vh", background: "#08080f", fontFamily: "'Outfit', sans-serif", color: "#f0f0fa", paddingBottom: 96 }}>
@@ -221,36 +315,63 @@ export default function WorkoutRoutine() {
               2-WEEK TARGETS
             </span>
           </div>
-          <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, overflow: "hidden" }}>
-            {targets.map((t, i) => {
-              const cfg = STATUS_CONFIG[t.status as keyof typeof STATUS_CONFIG];
-              return (
-                <div key={i} style={{
-                  padding: "14px 20px",
-                  borderBottom: i < targets.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#f0f0fa", marginBottom: 3 }}>{t.exercise}</div>
-                    <div style={{ fontSize: 12, color: "#6b7280" }}>
-                      {t.from}
-                      <span style={{ color: "#4b4b60", margin: "0 5px" }}>→</span>
-                      <span style={{ color: "#f0f0fa", fontWeight: 600 }}>{t.to}</span>
+
+          {targetsLoading ? (
+            <div style={{
+              background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 20, padding: "24px 20px",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              color: "#4b4b60", fontSize: 13,
+            }}>
+              <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} />
+              Analysing your workouts…
+            </div>
+          ) : targets.length === 0 ? (
+            <div style={{
+              background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 20, padding: "28px 20px", textAlign: "center",
+            }}>
+              <Target size={28} color="#3a3a52" style={{ marginBottom: 10 }} />
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#6b7280", marginBottom: 6 }}>No targets yet</div>
+              <div style={{ fontSize: 12, color: "#3a3a52", lineHeight: 1.6 }}>
+                Log the same exercise in at least 2 sessions and targets will appear here automatically.
+              </div>
+            </div>
+          ) : (
+            <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, overflow: "hidden" }}>
+              {targets.map((t, i) => {
+                const cfg = STATUS_CONFIG[t.status];
+                return (
+                  <div key={i} style={{
+                    padding: "14px 20px",
+                    borderBottom: i < targets.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#f0f0fa", marginBottom: 3 }}>{t.exercise}</div>
+                      <div style={{ fontSize: 12, color: "#6b7280" }}>
+                        {t.from} kg
+                        <span style={{ color: "#4b4b60", margin: "0 5px" }}>→</span>
+                        <span style={{ color: "#f0f0fa", fontWeight: 600 }}>
+                          {t.status === "reset" ? t.to : `${t.to} kg`}
+                        </span>
+                        <span style={{ color: "#3a3a52", marginLeft: 6 }}>· {t.sessions} sessions</span>
+                      </div>
+                    </div>
+                    <div style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+                      background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
+                      flexShrink: 0, marginLeft: 12,
+                    }}>
+                      {t.status === "ready" && <Check size={11} strokeWidth={3} />}
+                      {cfg.label.toUpperCase()}
                     </div>
                   </div>
-                  <div style={{
-                    display: "inline-flex", alignItems: "center", gap: 5,
-                    padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-                    background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
-                    flexShrink: 0, marginLeft: 12,
-                  }}>
-                    {t.status === "ready" && <Check size={11} strokeWidth={3} />}
-                    {cfg.label.toUpperCase()}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Rest reminder */}

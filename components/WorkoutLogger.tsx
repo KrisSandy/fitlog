@@ -9,7 +9,7 @@ import BottomNav from "@/components/BottomNav";
 import {
   ChevronLeft, ChevronRight, Check, Plus, X,
   ArrowUp, ArrowDown, Activity, Zap, Dumbbell,
-  FileText, Save, RefreshCw,
+  FileText, Save, RefreshCw, Clock, Home,
 } from "lucide-react";
 
 const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -78,6 +78,10 @@ function formatDateDisplay(dateStr: string): { weekday: string; date: string } {
   return { weekday, date };
 }
 
+function stripKg(w: string): string {
+  return w.replace(/kg$/i, "").trim();
+}
+
 function buildLogFromRoutine(dateStr: string, routine: Routine): WorkoutLog {
   return {
     id: `workout-${dateStr}`, date: dateStr, dayType: routine.type, dayName: routine.name,
@@ -88,7 +92,7 @@ function buildLogFromRoutine(dateStr: string, routine: Routine): WorkoutLog {
         sets: Array.from({ length: ex.sets }, (_, i) => ({
           setNumber: i + 1,
           reps: rpsArr[i] || rpsArr[rpsArr.length - 1] || "10",
-          weight: ex.weight, completed: false,
+          weight: stripKg(ex.weight), completed: false,
         })),
       };
     }),
@@ -114,6 +118,7 @@ export default function WorkoutLogger() {
   const [customWeight, setCustomWeight] = useState("");
   const [saved, setSaved]             = useState(false);
   const [saving, setSaving]           = useState(false);
+  const [showComplete, setShowComplete] = useState(false);
 
   useEffect(() => {
     const today = getTodayDateString();
@@ -175,8 +180,8 @@ export default function WorkoutLogger() {
     setSaving(true);
     const updated = { ...log, notes, completedAt: new Date().toISOString() };
     await saveWorkoutLog(updated);
-    setLog(updated); setSaved(true); setSaving(false);
-    setTimeout(() => setSaved(false), 2500);
+    setLog(updated); setSaving(false);
+    setShowComplete(true);
   };
 
   const activeRoutine = log ? routines.find(r => r.type === log.dayType) : null;
@@ -188,6 +193,108 @@ export default function WorkoutLogger() {
 
   const { weekday, date: dateLabel } = formatDateDisplay(currentDate);
   const isToday = currentDate === getTodayDateString();
+
+  /* ── Completion screen ── */
+  if (showComplete && log) {
+    const totalEx   = log.exercises.length;
+    const doneSets  = log.exercises.reduce((a, ex) => a + ex.sets.filter(s => s.completed).length, 0);
+    const totalSetsAll = log.exercises.reduce((a, ex) => a + ex.sets.length, 0);
+    const pct = totalSetsAll > 0 ? Math.round((doneSets / totalSetsAll) * 100) : 0;
+    const timeStr = log.completedAt
+      ? new Date(log.completedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+      : "";
+
+    return (
+      <div style={{ minHeight: "100vh", background: "#08080f", fontFamily: "'Outfit', sans-serif", color: "#f0f0fa", paddingBottom: 96, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* Ambient glow */}
+        <div style={{
+          position: "fixed", top: "20%", left: "50%", transform: "translateX(-50%)",
+          width: 500, height: 500, borderRadius: "50%",
+          background: `radial-gradient(circle, ${dayGlow} 0%, transparent 60%)`,
+          pointerEvents: "none", zIndex: 0,
+        }} />
+
+        <div style={{ maxWidth: 400, width: "100%", padding: "0 24px", position: "relative", zIndex: 1, textAlign: "center", animation: "fadeUp 0.5s ease-out" }}>
+
+          {/* Check icon */}
+          <div style={{
+            width: 88, height: 88, borderRadius: 28, margin: "0 auto 28px",
+            background: `linear-gradient(135deg, ${dayColor}22, ${dayColor}0a)`,
+            border: `1.5px solid ${dayColor}50`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: `0 0 48px ${dayGlow}`,
+            animation: "popIn 0.5s ease-out",
+          }}>
+            <Check size={40} color={dayColor} strokeWidth={2.5} style={{ animation: "checkmark 0.4s 0.2s ease-out both" }} />
+          </div>
+
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 13, letterSpacing: 3, color: dayColor, marginBottom: 8, textTransform: "uppercase" }}>
+            Workout complete
+          </div>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 44, letterSpacing: 2, color: "#fff", lineHeight: 1, marginBottom: 32 }}>
+            {log.dayName.toUpperCase()}
+          </div>
+
+          {/* Stats row */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 28 }}>
+            {[
+              { value: totalEx,       label: "Exercises" },
+              { value: `${doneSets}/${totalSetsAll}`, label: "Sets done" },
+              { value: `${pct}%`,     label: "Completed" },
+            ].map(stat => (
+              <div key={stat.label} style={{
+                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 18, padding: "16px 8px",
+              }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: pct === 100 ? "#22c55e" : dayColor, lineHeight: 1, marginBottom: 4 }}>{stat.value}</div>
+                <div style={{ fontSize: 11, color: "#4b4b60", fontWeight: 500, letterSpacing: 0.3 }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Notes preview */}
+          {notes.trim() && (
+            <div style={{
+              background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 16, padding: "14px 16px", marginBottom: 28, textAlign: "left",
+            }}>
+              <div style={{ fontSize: 11, color: "#4b4b60", fontWeight: 700, letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>Session notes</div>
+              <div style={{ fontSize: 13, color: "#9ca3af", lineHeight: 1.6, fontStyle: "italic" }}>{notes}</div>
+            </div>
+          )}
+
+          {/* Saved time */}
+          {timeStr && (
+            <div style={{ fontSize: 12, color: "#3a3a52", marginBottom: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+              <Clock size={12} />
+              Saved at {timeStr}
+            </div>
+          )}
+
+          {/* CTA */}
+          <a href="/" style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            background: `linear-gradient(135deg, ${dayColor}, ${dayColor}cc)`,
+            color: "#fff", borderRadius: 18, padding: "16px 24px",
+            textDecoration: "none", fontWeight: 700, fontSize: 16,
+            boxShadow: `0 4px 28px ${dayGlow}, inset 0 1px 0 rgba(255,255,255,0.15)`,
+          }}>
+            <Home size={18} strokeWidth={2.5} />
+            Back to home
+          </a>
+
+          <button onClick={() => setShowComplete(false)} style={{
+            marginTop: 14, background: "transparent", border: "none",
+            color: "#4b4b60", fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+          }}>
+            Keep editing
+          </button>
+        </div>
+
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#08080f", fontFamily: "'Outfit', sans-serif", color: "#f0f0fa", paddingBottom: 96 }}>
@@ -502,7 +609,7 @@ export default function WorkoutLogger() {
                     <div style={{ fontSize: 11, color: group.color, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6 }}>{group.group}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {group.exercises.map(ex => (
-                        <button key={ex.name} onClick={() => { setCustomName(ex.name); setCustomSets(String(ex.sets)); setCustomReps(String(ex.reps)); setCustomWeight(ex.weight); }} style={{
+                        <button key={ex.name} onClick={() => { setCustomName(ex.name); setCustomSets(String(ex.sets)); setCustomReps(String(ex.reps)); setCustomWeight(stripKg(ex.weight)); }} style={{
                           background: customName === ex.name ? `${group.color}18` : "rgba(255,255,255,0.04)",
                           border: `1px solid ${customName === ex.name ? group.color : "rgba(255,255,255,0.07)"}`,
                           borderRadius: 10, padding: "5px 10px",
