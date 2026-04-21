@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const publicPaths = ["/login", "/signup"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -48,7 +48,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all routes except static files and API routes
     "/((?!_next/static|_next/image|favicon.ico|api/).*)",
   ],
 };
