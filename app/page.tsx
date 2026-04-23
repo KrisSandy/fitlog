@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase";
 import { getWorkoutLogs, getTodayDateString, type WorkoutLog } from "@/lib/storage";
 import BottomNav from "@/components/BottomNav";
 import {
-  Dumbbell, LogOut, Flame, Activity, CalendarDays,
+  Dumbbell, Flame, Activity, CalendarDays,
   ChevronRight, Zap, BarChart2,
 } from "lucide-react";
 
@@ -37,10 +36,9 @@ function getColorForType(t: string) {
 }
 
 export default function Home() {
-  const [displayName, setDisplayName] = useState("");
-  const [loading, setLoading]         = useState(true);
-  const [logs, setLogs]               = useState<WorkoutLog[]>([]);
-  const [todayLog, setTodayLog]       = useState<WorkoutLog | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [logs, setLogs]         = useState<WorkoutLog[]>([]);
+  const [todayLog, setTodayLog] = useState<WorkoutLog | null>(null);
 
   const now     = new Date();
   const today   = getTodayDateString();
@@ -49,12 +47,6 @@ export default function Home() {
 
   useEffect(() => {
     const load = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
-        setDisplayName(profile?.display_name || user.email?.split("@")[0] || "Athlete");
-      }
       const allLogs = await getWorkoutLogs();
       const sorted  = allLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setLogs(sorted);
@@ -64,12 +56,6 @@ export default function Home() {
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    window.location.href = "/login";
-  };
 
   const streak      = getStreak(logs);
   const weeklyCount = getWeeklyCount(logs);
@@ -129,25 +115,16 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <button onClick={handleLogout} style={{
-            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 10, padding: "8px 12px", color: "#4b4b60", cursor: "pointer",
-            fontSize: 12, fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 5,
-            transition: "all 0.2s ease",
-          }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#e8e8f0"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "#4b4b60"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
-          >
-            <LogOut size={13} />
-            Out
-          </button>
+          <div style={{ fontSize: 11, color: "#4b4b60", fontWeight: 500 }}>
+            {streak > 0 ? `🔥 ${streak}d` : ""}
+          </div>
         </div>
 
         {/* ── Greeting ── */}
         {!loading && (
           <div style={{ marginBottom: 28, animation: "fadeUp 0.55s ease-out" }}>
             <div style={{ fontSize: 28, fontWeight: 700, color: "#f0f0fa", lineHeight: 1.2, marginBottom: 4 }}>
-              {displayName ? `Hey, ${displayName} 👋` : "Welcome back 👋"}
+              Welcome back 👋
             </div>
             <div style={{ fontSize: 14, color: "#6b7280" }}>
               {streak > 0 ? `${streak}-day streak — keep it going.` : "Ready to start your session?"}
